@@ -14,6 +14,14 @@ refer to the [commit
 history](https://github.com/GoogleCloudPlatform/spring-cloud-gcp/commits/main)
 on GitHub.
 
+## [5.6.1](https://github.com/GoogleCloudPlatform/spring-cloud-gcp/compare/v5.6.0...v5.6.1) (2024-09-04)
+
+
+### Bug Fixes
+
+* Descendants entities losing database ID from parent ([#3142](https://github.com/GoogleCloudPlatform/spring-cloud-gcp/issues/3142)) ([#3156](https://github.com/GoogleCloudPlatform/spring-cloud-gcp/issues/3156)) ([02a1e65](https://github.com/GoogleCloudPlatform/spring-cloud-gcp/commit/02a1e65a4bd5c33039d4ee438591fc3632bb0c1f))
+* handle null primary keys between parent and child objects ([#3179](https://github.com/GoogleCloudPlatform/spring-cloud-gcp/issues/3179)) ([42c69b6](https://github.com/GoogleCloudPlatform/spring-cloud-gcp/commit/42c69b6298ea06b8043811b4048eaf9a6b9cba19))
+
 ## [5.6.0](https://github.com/GoogleCloudPlatform/spring-cloud-gcp/compare/v5.5.1...v5.6.0) (2024-08-29)
 
 
