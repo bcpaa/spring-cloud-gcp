@@ -1,73 +1,65 @@
-/*
- * Copyright 2017-2018 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+import static org.mockito.Mockito.*;
+import static org.junit.jupiter.api.Assertions.*;
 
-package com.example;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+import org.springframework.dao.DataAccessException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import com.google.cloud.spring.pubsub.core.PubSubTemplate;
-import com.google.cloud.spring.pubsub.integration.outbound.PubSubMessageHandler;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.Bean;
-import org.springframework.integration.annotation.MessagingGateway;
-import org.springframework.integration.annotation.ServiceActivator;
-import org.springframework.messaging.MessageHandler;
+public class ClineDataMappingEventServiceTest {
 
-/** Spring Integration Channel Adapters for Google Cloud Pub/Sub code sample. */
-@SpringBootApplication
-public class SenderApplication {
+    @InjectMocks
+    private ClineDataMappingEventService clineDataMappingEventService;
 
-  private static final Log LOGGER = LogFactory.getLog(SenderApplication.class);
+    @Mock
+    private DataMappingOutboxRepository dataMappingOutboxRepository;
 
-  public static void main(String[] args) {
-    SpringApplication.run(SenderApplication.class, args);
-  }
+    @Mock
+    private DataReceivedToInboxRepository dataMappingInboxRepository;
 
-  @Bean
-  public String topicName(@Value("${topicName}") String topicName) {
-    return topicName;
-  }
+    @Mock
+    private Logger log;
 
-  @Bean
-  @ServiceActivator(inputChannel = "pubSubOutputChannel")
-  public MessageHandler messageSender(
-      PubSubTemplate pubsubTemplate, @Qualifier("topicName") String topicName) {
-    PubSubMessageHandler adapter = new PubSubMessageHandler(pubsubTemplate, topicName);
-    adapter.setFailureCallback(
-        (exception, message) ->
-            LOGGER.info("There was an error sending the message: " + message.getPayload()));
+    @BeforeEach
+    public void setUp() {
+        MockitoAnnotations.openMocks(this);
+    }
 
-    adapter.setSuccessCallback(
-        (messageId, message) ->
-            LOGGER.info(
-                "Message was sent successfully;\n\tpublish ID = "
-                    + messageId
-                    + "\n\tmessage="
-                    + message.getPayload()));
+    @Test
+    public void testProcessExpiryDataOutboxEvent_Success() {
+        DataReceivedInbox dataReceivedInbox = new DataReceivedInbox();
+        dataReceivedInbox.setConstructionlineReferenceNumber("1234");
 
-    return adapter;
-  }
+        // Call the method under test
+        clineDataMappingEventService.processExpiryDataOutboxEvent(dataReceivedInbox);
 
-  /** interface for sending a message to Pub/Sub. */
-  @MessagingGateway(defaultRequestChannel = "pubSubOutputChannel")
-  public interface PubSubOutboundGateway {
+        // Verify that logging was done
+        verify(log).info("Processing calculated expiry data event received: {}", dataReceivedInbox);
+        verify(log).info("Message has been saved to process expiry data outbox for buyerId: {}", "1234");
 
-    void sendToPubSub(String text);
-  }
+        // You can also verify interactions with repositories if needed
+        // Example: verify(dataMappingOutboxRepository).save(any());
+    }
+
+    @Test
+    public void testProcessExpiryDataOutboxEvent_DataAccessException() {
+        DataReceivedInbox dataReceivedInbox = new DataReceivedInbox();
+        dataReceivedInbox.setConstructionlineReferenceNumber("1234");
+
+        // Simulate DataAccessException
+        doThrow(new DataAccessException("Database error") {})
+            .when(dataMappingOutboxRepository).save(any());
+
+        // Expect the method to throw a DataAccessException after retries
+        assertThrows(DataAccessException.class, () -> {
+            clineDataMappingEventService.processExpiryDataOutboxEvent(dataReceivedInbox);
+        });
+
+        // Verify logging of the error
+        verify(log).error(anyString(), any(DataAccessException.class));
+    }
 }
